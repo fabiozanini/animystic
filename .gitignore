@@ -1,0 +1,19 @@
+# Transplied and node
+node_modules
+build/app.css
+build/app.js
+
+### /home/fabio/.gitignore-boilerplates/Global/Linux.gitignore
+
+.*
+!.gitignore
+*~
+
+
+### /home/fabio/.gitignore-boilerplates/Global/vim.gitignore
+
+.*.sw[a-z]
+*.un~
+Session.vim
+.netrwhist
+
