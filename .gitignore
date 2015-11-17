@@ -2,6 +2,7 @@
 node_modules
 build/app.css
 build/app.js
+build/index.html
 
 ### /home/fabio/.gitignore-boilerplates/Global/Linux.gitignore
 
