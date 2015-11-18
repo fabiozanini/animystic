@@ -7,15 +7,33 @@ var browserify = './node_modules/browserify/bin/cmd.js'
 function rebundle() {
   // bundle JS app
   console.log('Browserify COFFEE -> JS');
-  exec(browserify+' coffee/*.coffee -t coffeeify -o build/app.js');
+  exec(browserify+' coffee/*.coffee -t coffeeify -o build/app.js',
+      function(error, stdout, stderr) {
+          if(stdout)
+            console.log(stdout);
+          if (stderr)
+          console.log(stderr);
+      });
 
   // include CSS
   console.log('SASS -> CSS');
-  exec('sass --sourcemap=none --scss style/app.sass build/app.css');
+  exec('sass --sourcemap=none --scss style/app.sass build/app.css',
+      function(error, stdout, stderr) {
+          if(stdout)
+            console.log(stdout);
+          if(stderr)
+            console.log(stderr);
+      });
 
   // copy HTML
   console.log('Copy HTML');
-  exec('cp html/index.html build/index.html');
+  exec('cp html/index.html build/index.html',
+      function(error, stdout, stderr) {
+          if(stdout)
+            console.log(stdout);
+          if(stderr)
+            console.log(stderr);
+      });
 }
 
 // Watch and recompile
