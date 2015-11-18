@@ -2,7 +2,6 @@
 d3 = require('d3')
 
 
-# Functions
 # Canvas
 vis = d3.select('#canvas')
 width = parseInt(vis.style("width"))
@@ -12,6 +11,16 @@ vis.style("width", size)
   .style("height", size)
 width = size
 height = size
+
+# Svg filters
+defs = vis.append('svg:defs')
+defs.append('svg:filter')
+  .attr({id: 'blurFilter'})
+  .append('feGaussianBlur')
+  .attr({
+    'in': "SourceGraphic",
+    'stdDeviation': 1
+  })
 
 # Support coordinates
 x = d3.scale.linear()
@@ -29,15 +38,9 @@ class Dot
       .attr("cx", x(50))
       .attr("cy", y(50))
       .attr("r", 5)
-      .style("fill", "white")
+      .attr("class", "brightFill")
 
-    @dot.on('mouseover', @pulse.bind(@dot))
-      .on('mouseout',  @unpulse.bind(@dot))
-      .on('click', (d) ->
-        d3.select(this).remove()
-        stage.caption.fadeOut()
-        stage.snake.show()
-      )
+    @pulse.bind(@dot)()
 
   pulse: (d) ->
     repeat = =>
@@ -62,7 +65,8 @@ class Snake
   constructor: (stage) ->
     @stage = stage
     @snake = vis.append("path")
-      .attr("stroke", "white")
+      .attr("fill", "none")
+      .attr("class", "brightStroke")
       .attr("stroke-width", 0)
       .attr("stroke-linecap", "round")
       .attr("d",
@@ -74,7 +78,28 @@ class Snake
       
     @L = @snake[0][0].getTotalLength()
 
-  show: (stage) ->
+    @marker = vis.append("circle")
+      .attr("r", 0)
+      .attr("class", "brightFill")
+      .attr("stroke-width", 0)
+      .attr("transform", "translate("+x(50)+","+y(50)+")")
+
+  start: (callback) ->
+    translateAlong = (path) ->
+      l = path.getTotalLength()
+      return (i) ->
+        ((t) ->
+          p = path.getPointAtLength(t * l)
+          "translate("+p.x+","+p.y+")"
+        )
+
+    @marker.attr("r", 6)
+      .attr("filter", "url(#blurFilter)")
+      .transition()
+      .duration(3000)
+      .ease("linear")
+      .attrTween("transform", translateAlong(@snake.node()))
+
     @snake.attr("stroke-width", 10)
       .attr("stroke-dasharray", @L)
       .attr("stroke-dashoffset", @L)
@@ -83,13 +108,12 @@ class Snake
       .ease("linear")
       .attr("stroke-dasharray", @L - @r)
       .attr("stroke-dashoffset", -@r)
-      .each("end", (=>
-        @stage.circle = new Cell(r=@r)
-        @snake.remove()
-        @stage.circle.swell()
-        delete @stage.snake
+      .each("end", -> callback?())
 
-      ))
+  end: ->
+    @marker.remove()
+    @snake.remove()
+
 
 
 class Caption
@@ -99,7 +123,7 @@ class Caption
       .attr("y", y(85))
       .attr("font-family", "sans-serif")
       .attr("font-size", "20px")
-      .attr("fill", "white")
+      .attr("class", "brightFill")
       .attr("text-anchor", "middle")
       .text("Click on the dot to start")
 
@@ -118,7 +142,9 @@ class Caption
 
 
 class Cell
-  constructor: (@r) ->
+  constructor: (@stage, @r) ->
+
+  show: ->
     @g = vis.append("g")
       .attr("transform", "translate("+x(50)+","+y(50)+")")
 
@@ -126,27 +152,31 @@ class Cell
       .attr("cx", 0)
       .attr("cy", 0)
       .attr("r", @r)
+      .attr("class", "brightStroke")
       .style("fill", "none")
-      .style("stroke", "white")
       .style("stroke-width", 10)
+
     return this
 
-  swell: ->
+  swell: (callback) ->
     @r += 40
     @circle.transition()
       .duration(3000)
       .ease("cubic-out")
       .attr("r", @r)
-      .each("end", => @addReceptors(10))
+      .each("end", -> callback?())
 
-  addReceptors: (n) ->
+  addReceptors: (n, callback) ->
     angles = (i * 360 / n for i in [1..n])
+    n_receptors = 0
+
     @g.selectAll(".receptor")
       .data(angles)
       .enter()
       .append("path")
-      .style("opacity", 0)
-      .attr("stroke", "white")
+      .classed("brightStroke", true)
+      .classed("receptor", true)
+      .attr("fill", "none")
       .attr("stroke-width", 4)
       .attr("d",
         ["M"+@r+" 5",
@@ -157,21 +187,48 @@ class Cell
          "l-20 0",
         ].join(" "))
       .attr("transform", (angle) -> "rotate("+angle+")")
-      .attr("class", "receptor")
+      .style("opacity", 0)
       .transition()
       .duration(1000)
       .delay((d) -> 3000 * Math.random())
       .style("opacity", 1)
+      .each("end", (=>
+        n_receptors += 1
+        if(n_receptors == angles.length)
+          callback?()
+      ))
 
 
 # Animation
 class Stage
   constructor: ->
+
+  run: ->
     @caption = new Caption(this)
     @snake = new Snake(this)
+    @cell = new Cell(this, r=@snake.r)
     @dot = new Dot(this)
 
-    #cell = new Cell(50)
-    #  .addReceptors()
+    @dot.dot.on('click', => @animate())
 
-new Stage()
+  animate: ->
+    @dot.dot.remove()
+    @caption.fadeOut()
+    
+    @snake.start(=>
+      @snake.end()
+      delete this.snake
+      @cell.show()
+      @caption.text("This is a B cell")
+      @cell.swell()
+      @caption.fadeIn()
+    )
+
+    
+  test: ->
+    @cell = new Cell(r=100)
+    @cell.show()
+
+
+stage = new Stage()
+stage.run()
