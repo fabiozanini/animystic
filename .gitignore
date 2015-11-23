@@ -1,5 +1,8 @@
-# Transplied and node
+# Node and bower
 node_modules
+bower_components
+
+# Transplied and node
 build/app.css
 build/app.js
 build/index.html
